@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+/* eslint-disable react/prop-types */
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { toast } from 'react-toastify';
 import { api } from '../../api';
@@ -7,10 +8,45 @@ import { platforms } from '../../utils/platforms';
 
 // eslint-disable-next-line react/display-name
 const LinkField = React.memo(
-	({ index, control, remove, handleDelete, isStored }) => {
+	({
+		index,
+		control,
+		remove,
+		handleDelete,
+		isStored,
+		handleDragStart,
+		handleDragEnter,
+		handleDrop,
+		draggable,
+	}) => {
 		return (
-			<div className="bg-gray-50 p-6 rounded-lg shadow-md relative">
-				<h3 className="font-semibold text-lg mb-4">Link #{index + 1}</h3>
+			<div
+				className="bg-gray-50 p-6 rounded-lg shadow-md relative"
+				draggable={draggable}
+				onDragStart={handleDragStart(index)}
+				onDragEnter={handleDragEnter(index)}
+				onDrop={handleDrop(index)}
+				onDragOver={(e) => e.preventDefault()}
+			>
+				<h3 className="font-semibold text-lg mb-4 flex items-center gap-1 cursor-grab">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width={24}
+						height={24}
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth={1.5}
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						className="icon icon-tabler icons-tabler-outline icon-tabler-equal"
+					>
+						<path stroke="none" d="M0 0h24v24H0z" fill="none" />
+						<path d="M5 10h14" />
+						<path d="M5 14h14" />
+					</svg>
+					Link #{index + 1}
+				</h3>
 				<div>
 					<label className="block text-sm font-medium text-gray-700">
 						Platform
@@ -86,7 +122,7 @@ const DynamicForm = () => {
 		),
 	});
 
-	const { fields, append, remove } = useFieldArray({
+	const { fields, append, remove, move } = useFieldArray({
 		control,
 		name: 'links',
 	});
@@ -95,6 +131,8 @@ const DynamicForm = () => {
 		control,
 		name: 'links',
 	});
+
+	const [draggedItemIndex, setDraggedItemIndex] = useState(null);
 
 	useEffect(() => {
 		if (preview?.links?.length) {
@@ -150,11 +188,35 @@ const DynamicForm = () => {
 					}
 				}
 			} else {
-				// If the link is not stored in local storage,
 				remove(index);
 			}
 		},
 		[formValues, remove, apiConfig]
+	);
+
+	const handleDragStart = useCallback(
+		(index) => (e) => {
+			setDraggedItemIndex(index);
+		},
+		[]
+	);
+
+	const handleDragEnter = useCallback(
+		(index) => (e) => {
+			e.preventDefault();
+			if (draggedItemIndex !== null && draggedItemIndex !== index) {
+				move(draggedItemIndex, index);
+				setDraggedItemIndex(index);
+			}
+		},
+		[draggedItemIndex, move]
+	);
+
+	const handleDrop = useCallback(
+		(index) => (e) => {
+			setDraggedItemIndex(null);
+		},
+		[]
 	);
 
 	const onSubmit = useCallback(
@@ -191,6 +253,10 @@ const DynamicForm = () => {
 						remove={remove}
 						handleDelete={handleDelete}
 						isStored={isStored}
+						handleDragStart={handleDragStart}
+						handleDragEnter={handleDragEnter}
+						handleDrop={handleDrop}
+						draggable={true}
 					/>
 				);
 			})}
